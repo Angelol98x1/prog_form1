@@ -1,31 +1,40 @@
-FROM php:8.2-fpm
+FROM php:8.2-cli
 
-# Instalar dependencias
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
-    git curl libpng-dev libonig-dev libxml2-dev \
-    zip unzip libzip-dev libpq-dev
+    libpq-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Instalar extensiones PHP (IMPORTANTE: pgsql)
-RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip
+# Instalar extensiones de PHP
+RUN docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Directorio de trabajo
 WORKDIR /var/www/html
+
+# Copiar archivos del proyecto
 COPY . .
 
-# Instalar dependencias
-RUN composer install --no-dev --optimize-autoloader
+# Instalar dependencias de Composer
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Configurar permisos (esto funciona en Render/Linux)
-RUN chmod -R 775 storage bootstrap/cache
+# Dar permisos (IMPORTANTE)
+RUN chmod -R 777 storage bootstrap/cache
 
-# Optimizar Laravel (IMPORTANTE)
-RUN php artisan config:cache
-RUN php artisan route:cache
-RUN php artisan view:cache
+# Variables de entorno por defecto
+ENV PORT=8080
 
-EXPOSE 8000
-CMD php artisan serve --host=0.0.0.0 --port=8000
+# Comando de inicio (CORREGIDO)
+CMD php artisan config:clear && \
+    php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache && \
+    php artisan migrate --force && \
+    php artisan serve --host=0.0.0.0 --port=${PORT}
