@@ -1,12 +1,17 @@
 FROM php:8.2-cli
 
-# Instalar extensiones necesarias
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     libpq-dev \
+    libzip-dev \
     zip \
     unzip \
     git \
-    && docker-php-ext-install pdo pdo_pgsql
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar extensiones de PHP
+RUN docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -14,17 +19,21 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Directorio de trabajo
 WORKDIR /var/www/html
 
-# Copiar archivos
+# Copiar archivos del proyecto
 COPY . .
 
-# Instalar dependencias
-RUN composer install --no-dev --optimize-autoloader
+# Instalar dependencias de Composer
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Permisos
+# Dar permisos
 RUN chmod -R 775 storage bootstrap/cache
 
-# Puerto
+# Exponer puerto
 EXPOSE 8080
 
 # Comando de inicio
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8080
+CMD php artisan config:cache && \
+    php artisan route:cache && \
+    php artisan view:cache && \
+    php artisan migrate --force && \
+    php artisan serve --host=0.0.0.0 --port=8080
