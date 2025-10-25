@@ -22,8 +22,10 @@ RUN composer install --no-dev --optimize-autoloader
 # Configurar permisos (esto funciona en Render/Linux)
 RUN chmod -R 775 storage bootstrap/cache
 
-# Generar key si no existe (opcional)
-# RUN php artisan key:generate
+# Optimizar Laravel (IMPORTANTE)
+RUN php artisan config:cache
+RUN php artisan route:cache
+RUN php artisan view:cache
 
 EXPOSE 8000
 CMD php artisan serve --host=0.0.0.0 --port=8000
