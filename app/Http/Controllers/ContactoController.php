@@ -9,7 +9,7 @@ class ContactoController extends Controller
 {
     public function index()
     {
-        return view('contacto/formulario');
+        return view('contacto.formulario'); 
     }
 
     public function store(Request $request)
@@ -29,6 +29,6 @@ class ContactoController extends Controller
     public function listar()
     {
         $contactos = Contacto::orderBy('created_at', 'desc')->get();
-        return view('contacto/listar', compact('contactos'));
+        return view('contacto.listar', compact('contactos')); 
     }
 }
